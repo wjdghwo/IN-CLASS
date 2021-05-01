@@ -73,7 +73,7 @@ grid.arrange(p1,p2,ncol=2)
 ACF 지수적으로 천천히 감소
 PACF 시점 2부터 절단된 형태
 
-```{r AR(1)_4}
+```{r AR(1)_4_1}
 
 ggAcf(sim_AR1_m0.9)+ggtitle("ACF of AR(1) with phi=-0.9")->p3
 ggPacf(sim_AR1_m0.9)+ggtitle("PACF of AR(1) with phi=-0.9")->p4
