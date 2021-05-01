@@ -1,0 +1,185 @@
+---
+title: "time series4"
+author: "hojae"
+date: '2021 4 18 '
+output: html_document
+---
+
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load libraries
+
+```{r library, warning=F, message=F}
+library(tidyverse)
+library(ggplot2)
+library(forecast)
+library(gridExtra)
+```
+
+
+
+## AR(1) simulation
+```{r AR(1)_1}
+?arima.sim
+
+## list description for AR(1) model with small coef
+## c(p,d,q) : AR(p), MA(q), I(d)
+## yt = phi0 + phi1 * y(t-1) + at : AR(1), phi = 0.9
+AR1_p0.9 <- list(order = c(1, 0, 0), ar = 0.9, sd = 1)
+AR1_m0.9 <- list(order = c(1, 0, 0), ar = -0.9, sd = 1)
+
+## simulate AR(1)
+sim_AR1_p0.9 <- arima.sim(n = 100, model = AR1_p0.9)
+sim_AR1_m0.9 <- arima.sim(n = 100, model = AR1_m0.9)
+
+#Now let’s plot the 2 simulated series.
+
+
+## setup plot region
+par(mfrow = c(1, 2))
+## get y-limits for common plots
+ylm <- c(min(sim_AR1_p0.9, sim_AR1_m0.9), max(sim_AR1_p0.9, sim_AR1_m0.9))
+## plot the ts
+plot.ts(sim_AR1_p0.9, ylim = ylm, ylab = expression(italic(x)[italic(t)]),
+  main = expression(paste(phi, " = 0.9")))
+plot.ts(sim_AR1_m0.9, ylim = ylm, ylab = expression(italic(x)[italic(t)]),
+  main = expression(paste(phi, " = -0.9")))
+
+```
+
+정상시계열임
+phi=0.9 : 이전과 관계가 높고 천천히 움직임 큰틀의 평균에 벗어나지 않음
+phi=-0.9 : 진동성이 심함
+
+```{r AR(1)_2}
+# plotting with ggplot2
+plot1<-autoplot(sim_AR1_p0.9)+ggtitle("AR(1) with phi=0.9")
+plot2<-autoplot(sim_AR1_m0.9)+ggtitle("AR(1) with phi=-0.9")
+grid.arrange(plot1,plot2,ncol=2)
+```
+
+```{r AR(1)_3}
+
+ggAcf(sim_AR1_p0.9)+ggtitle("ACF of AR(1) with phi=0.9")->p1
+ggPacf(sim_AR1_p0.9)+ggtitle("PACF of AR(1) with phi=0.9")->p2
+grid.arrange(p1,p2,ncol=2)
+```
+
+ACF 지수적으로 천천히 감소
+PACF 시점 2부터 절단된 형태
+
+```{r AR(1)_4}
+
+ggAcf(sim_AR1_m0.9)+ggtitle("ACF of AR(1) with phi=-0.9")->p3
+ggPacf(sim_AR1_m0.9)+ggtitle("PACF of AR(1) with phi=-0.9")->p4
+grid.arrange(p3,p4,ncol=2)
+
+```
+
+ACF 진동하며 지수적으로 천천히 감소 
+PACF 시점 2부터 절단된 형태
+
+```{r AR(1)_4}
+
+mean(sim_AR1_p0.9)
+sd(sim_AR1_p0.9)
+mean(sim_AR1_m0.9)
+sd(sim_AR1_m0.9)
+```
+
+```{r AR(1)_5}
+
+# AR(1) with phi of 0.3 and 0.8
+y1 <- arima.sim(n = 100, list(ar = 0.3))
+y2 <- arima.sim(n = 100, list(ar = -0.3))
+y3<- arima.sim(n = 100, list(ar = 0.8))
+y4<- arima.sim(n = 100, list(ar = -0.8))
+
+plot3<-autoplot(y1)+ggtitle("AR(1) with phi=0.3")
+plot4<-autoplot(y2)+ggtitle("AR(1) with phi=-0.3")
+plot5<-autoplot(y3)+ggtitle("AR(1) with phi=0.8")
+plot6<-autoplot(y4)+ggtitle("AR(1) with phi=-0.8")
+
+grid.arrange(plot3,plot4, plot5, plot6,ncol=2)
+```
+
+phi=0.8 : 가장 진동이 약함
+phi=-0.8 : 가장 진동이 심함
+
+```{r AR(1)-simulation}
+# y1 calculation
+
+y1 <- arima.sim(n = 100, list(ar = 0.5))
+autoplot(y1)+ggtitle("AR(1) with phi=0.5")
+
+acf(y1)$acf #0.479398158 : ACF 패키지로 계산
+
+sum((y1-mean(y1))^2)->a1
+
+term1<-as.numeric(y1-mean(y1))
+term2<-lag(as.numeric(y1))-mean(y1)
+
+sum(term1[-1]*term2[-1])->a2
+
+a2/a1 #0.4793982 : ACF 식으로 계산
+
+
+ggAcf(y1)
+
+
+
+term1<-as.numeric(y1-mean(y1))
+term3<-lag(as.numeric(y1),2)-mean(y1)
+
+sum(term1[-c(1:2)]*term3[-c(1:2)])->a3
+
+a2/a1 #0.4793982
+a3/a1 #0.1954117
+
+pacf(y1)$acf # 0.479398158, -0.044679213
+
+a3/a1-(a2/a1)^2->a4
+sqrt((1-(a2/a1)^2)*(1-(a2/a1)^2))->a5
+
+a4/a5 #-0.04467921
+
+ggPacf(y1)
+```
+
+직접 손으로도 계산할 수 있어야함
+
+## AR(2) simulation
+
+```{r AR2}
+
+z1 <- arima.sim(n = 100, list(ar = c(0.2, 0.4)))
+z2 <- arima.sim(n = 100, list(ar = c(-0.2, 0.6)))
+z3<- arima.sim(n = 100, list(ar = c(-0.5, -0.7)))
+z4<- arima.sim(n = 100, list(ar = c(1, -0.9)))
+
+plot7<-autoplot(z1)+ggtitle("AR(2) with phi1=0.2, phi2=0.4")
+plot8<-autoplot(z2)+ggtitle("AR(2) with phi1=-0.2, phi2=0.6")
+plot9<-autoplot(z3)+ggtitle("AR(2) with ph1i=-0.5, phi2=-0.7")
+plot10<-autoplot(z4)+ggtitle("AR(2) with phi1=1, phi2=-0.9")
+
+grid.arrange(plot7,plot8, plot9, plot10,ncol=2)
+
+
+ggAcf(z1)+ggtitle("ACF and PACF")->p1
+ggPacf(z1)+ggtitle(" AR(2) with phi1=0.2, phi2=0.4")->p2
+ggAcf(z2)+ggtitle("ACF and PACF")->p3
+ggPacf(z2)+ggtitle("AR(2) with phi1=-0.2, phi2=0.6")->p4
+grid.arrange(p1,p2,p3,p4,ncol=2)
+
+
+ggAcf(z3)+ggtitle("ACF and PACF")->p5
+ggPacf(z3)+ggtitle(" AR(2) with ph1i=-0.5, phi2=-0.7")->p6
+ggAcf(z4)+ggtitle("ACF and PACF")->p7
+ggPacf(z4)+ggtitle("AR(2) with phi1=1, phi2=-0.9")->p8
+grid.arrange(p5,p6,p7,p8,ncol=2)
+```

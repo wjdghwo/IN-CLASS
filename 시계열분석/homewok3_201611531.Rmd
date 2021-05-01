@@ -1,0 +1,178 @@
+---
+title: "Homework3_201611531"
+author: "Jeong Hojae"
+date: '2021 4 4 '
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+## 0. Read the data
+
+```{r data}
+library(tidyverse)
+library(ggplot2)
+library(forecast)
+library(seasonal)
+library(aTSA)
+library(timsac)
+
+data <- read_csv("/cloud/project/loadregr.csv")
+dim(data)
+summary(data)
+head(data)
+data_ts<-ts(data$MKw, start=c(1970, 5), end=c(1979, 12), frequency=12 )
+```
+
+## 1. Draw time series plot
+
+```{r 1}
+data_ts %>% autoplot() +
+  ggtitle("Time Series Graph of The Monthly Peak Load for Electricity Iowa")
+
+data_ts %>%
+  stl(t.window=13, s.window="periodic", robust=TRUE) %>%
+  autoplot()+
+  ggtitle("Some graphs")
+```
+
+The data has trend variation and seasonal trend. But, it doesn't seem to show about dependent of them.
+
+## 2. Fit decomposition model and draw a plot with the original data, seasonally adjusted, trend-cycle component all together.
+
+### Classical decomposition
+```{r Classical_additive}
+# additive
+dd1=decompose(data_ts,type="additive")
+tseries::kpss.test(dd1$random,null="Level")
+ggtsdisplay(dd1$random, main="residual")
+
+autoplot(data_ts, series="Data")+
+  autolayer(trendcycle(dd1),series="Trend") +
+  autolayer(seasadj(dd1),series="Seasonally Adjusted") +
+  xlab("Time") + ylab("New orders index")+
+  ggtitle("Classical decomposition(additive)") +
+  scale_color_manual(values=c("gray","blue","red"),breaks=c("Data","Seasonally Adjusted","Trend"))
+
+```
+
+Additive model is used when the seasons are constant regardless of the trend
+
+
+```{r Classical_multiplicative}
+# multiplicative
+dd2=decompose(data_ts,type="multiplicative")
+tseries::kpss.test(dd2$random,null="Level")
+ggtsdisplay(dd2$random, main="residual")
+
+autoplot(data_ts, series="Data")+
+  autolayer(trendcycle(dd2),series="Trend") +
+  autolayer(seasadj(dd2),series="Seasonally Adjusted") +
+  xlab("Time") + ylab("New orders index")+
+  ggtitle("Classical decomposition(multiplicative)") +
+  scale_color_manual(values=c("gray","blue","red"),breaks=c("Data","Seasonally Adjusted","Trend"))
+
+```
+
+Multiplicative model is used when the seasons change with the trend.
+
+
+In classical decomposition, the first and last few observations of the trend-cycle factor is removed.
+
+So, Let's apply another method. The following three methods don't make data loss.
+
+Plus, We cannot reject H0 in kpss.test. And the value is usually with in the significance level in the ACF and PACF graph. So, Data is stationary.
+
+### SEATS decomposition
+```{r SEATS}
+dd3<-seas(data_ts)
+names(dd3)
+dd3_r<-remainder(dd3)
+tseries::kpss.test(dd3_r,null="Level")
+ggtsdisplay(dd3_r, main="remainder")
+
+autoplot(data_ts, series="Data")+
+  autolayer(trendcycle(dd3),series="Trend") +
+  autolayer(seasadj(dd3),series="Seasonally Adjusted") +
+  xlab("Time") + ylab("New orders index")+
+  ggtitle("SEATS decomposition") +
+  scale_color_manual(values=c("gray","blue","red"),breaks=c("Data","Seasonally Adjusted","Trend"))
+```
+
+The procedure works only with quarterly and monthly data.
+
+There is no problem because the data is monthly.
+
+Plus, We cannot reject H0 in kpss.test. And the value is usually with in the significance level in the ACF and PACF graph. So, Data is stationary.
+
+### X11 decomposition
+```{r 2-4}
+data_ts %>% seas(x11="") ->dd4
+dd4_r=remainder(dd4)
+tseries::kpss.test(dd4_r,null="Level")
+ggtsdisplay(dd4_r, main="remainder")
+
+autoplot(data_ts, series="Data")+
+  autolayer(trendcycle(dd4),series="Trend") +
+  autolayer(seasadj(dd4),series="Seasonally Adjusted") +
+  xlab("Time") + ylab("New orders index")+
+  ggtitle("X11 decomposition") +
+  scale_color_manual(values=c("gray","blue","red"),breaks=c("Data","Seasonally Adjusted","Trend"))
+```
+
+Trend-cycle estimates are also available for all observations including the end points.
+
+And the seasonal component is allowed to vary slowly over time.
+
+So, that line isn't flatter than other procedure.
+
+Plus, We cannot reject H0 in kpss.test. And the value is usually with in the significance level in the ACF and PACF graph. So, Data is stationary.
+
+### STL decomposition
+```{r 2-5}
+dd5<-stl(data_ts,'periodic')
+dd5_r=remainder(dd5)
+tseries::kpss.test(dd5_r,null="Level")
+ggtsdisplay(dd5_r, main="remainder")
+
+autoplot(data_ts, series="Data")+
+  autolayer(trendcycle(dd5),series="Trend") +
+  autolayer(seasadj(dd5),series="Seasonally Adjusted") +
+  xlab("Time") + ylab("New orders index")+
+  ggtitle("STL decomposition") +
+  scale_color_manual(values=c("gray","blue","red"),breaks=c("Data","Seasonally Adjusted","Trend"))
+```
+
+STL will handle any type of seasonality, not only monthly and quarterly data.
+
+But, it does not handle trading day or calendar variation automatically, and it only provides facilities for additive decompositions.
+
+Plus, We cannot reject H0 in kpss.test. And the value is usually with in the significance level in the ACF and PACF graph. So, Data is stationary.
+
+Therefore, X11 seems most appropriate method considering the shape and stationary of the data.
+
+## 3. Draw sub-series seasonal effect graph in each month.
+
+```{r 3}
+dd4 %>% seasonal() %>% ggsubseriesplot()+ylab("Seasonal")
+```
+
+This graph shows shape of seasonal effect of each month
+(Blue line is constant seasonal effect of each month)
+
+The monthly peak load for electricity Iowa is high around May and November.
+And it is low around the end of January and the end of January
+
+## 4. Draw a polar seasonal plot.
+
+```{r 4}
+ggseasonplot(data_ts, polar=TRUE) +
+  ylab("MKw") +
+  ggtitle("Polar seasonal plot")
+```
+
+The graph show not only just the same results at the graph of number three but also an increase over the years.
+
+
+

@@ -1,0 +1,234 @@
+---
+title: "Homework2_201611531"
+author: "Jeong Hojae"
+date: '2021 3 27 '
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## 0. Read the data
+
+```{r data}
+library(readr)
+library(ggplot2)
+library(forecast)
+library(tseries)
+
+spot <- read_csv("/cloud/project/spot.csv")
+dim(spot)
+summary(spot)
+boxplot(spot)
+plot(c(1:100), t(spot),type = 'l')
+```
+
+## 1. Draw time series graph of sun spot. Do you see any cycle or seasonal effect?
+
+```{r num_1}
+spot.ts=ts(data=spot, frequency=1)
+plot(spot.ts, mai ="Time Series graph of Sun spot")
+abline(h=mean(spot.ts[,1]),col="blue")
+
+tseries::kpss.test(spot.ts,null="Level")
+tseries::kpss.test(spot.ts,null="Trend")
+```
+
+H0 : Data is level stationary. (tseries::kpss.test(spot.ts, null="Level"))
+
+When significance level is 0.05, p-value (0.1) is greater than it.
+So, We cannot reject H0.
+
+
+H0 : Data is trend stationary. (tseries::kpss.test(spot.ts, null="Trend"))
+
+When significance level is 0.05, p-value (0.0402) is smaller than it.
+So, We can reject H0.
+
+Therefore, This data has level.
+Alse, we can see cycle or seasonal effect easily at the graph.
+
+
+## 2. try 5-point moving average smoothing. Draw the plot of original graph in black, 5 point MA smoothing in red, mean value in blue.
+
+```{r num_2}
+m5=filter(spot.ts, filter=rep(1/5,5), method="convolution", sides=1)
+plot(spot.ts,main="5-point moving average")
+lines(m5,col="red",lty=1, lwd=2)
+abline(h=mean(spot.ts[,1]),col="blue")
+```
+
+There is no center to calculate average.
+
+$M_5=[Y_5+Y_4+Y_3+Y_2+Y_1]/5$
+
+
+## 3. Check the residual plot, check the stationary and the test the independence assumption. Carefully interpret the residual analysis.
+
+```{r num_3_1}
+head(m5,10)
+res=m5[-1:-4,]-spot.ts[-1:-4,]
+head(res,10)
+tsdisplay(res, main="residuals by MA(5) smoothing")
+```
+
+At the residual plot, it seems to have pattern.
+
+Also, several bars are crossing the blue line (significance level) at the ACF and PACF graphs.
+
+Therefore, The residual shows auto correlation after the model MA(5) is applied. i.e. It is non-stationary.
+
+```{r num_3_2}
+Box.test(res)
+```
+H0 : given time series data is independence
+
+When significance level is 0.05, p-value (5.044e-13) is smaller than it.
+So, We can reject H0.
+
+Therefore, independence of residuals doesn't exist.
+
+
+## 4. Fit the simple exponential smoothing with alpha=0.1 and with the optimized alpha. If you think we need a trend, or seasonal, or both try them. Please address all the modeling and show how you find the best exponential smoothing model for spot data.
+
+Let's compare exponential smoothing in all cases.
+
+### no trend and no seasonal effect
+
+```{r num_4_a_1}
+ho=HoltWinters(spot.ts, alpha=0.1, beta=F, gamma=F) 
+#exponential smoothing # (beta=F, gamma=F): no trend and no seasonal effect
+ho
+plot(ho)
+
+ha=HoltWinters(spot.ts,beta=F, gamma=F) #exponential smoothing
+ha
+plot(ha) # the red line is the fitted value
+```
+```{r num_4_a_2}
+fo=forecast(ho)
+tsdisplay(fo$residual)
+Box.test(fo$residual, type="Box-Pierce")
+
+fa=forecast(ha)
+tsdisplay(fa$residual)
+Box.test(fa$residual, type="Box-Pierce")
+```
+```{r num_4_a_3}
+accuracy(fo)
+accuracy(fa)
+```
+### no trend effect
+
+To consider seasonal variation, I set up frequency to 4.
+
+```{r num_4_b_1}
+spot.ts4=ts(data=spot,frequency=4) # seasonal data
+ho=HoltWinters(spot.ts4, alpha=0.1, beta=F) #exponential smoothing # (beta=F): no trend effect
+ho
+plot(ho)
+
+ha=HoltWinters(spot.ts4,beta=F) #exponential smoothing
+ha
+plot(ha) # the red line is the fitted value
+```
+
+```{r num_4_b_2}
+fo=forecast(ho)
+tsdisplay(fo$residual)
+Box.test(fo$residual, type="Box-Pierce")
+
+fa=forecast(ha)
+tsdisplay(fa$residual)
+Box.test(fa$residual, type="Box-Pierce")
+```
+
+```{r num_4_b_3}
+accuracy(fo)
+accuracy(fa)
+```
+
+### no seasonal effect
+
+```{r num_4_c_1}
+ho=HoltWinters(spot.ts, alpha=0.1, gamma=F) #exponential smoothing # (gamma=F): no seasonal effect
+ho
+plot(ho)
+
+ha=HoltWinters(spot.ts, gamma=F) #exponential smoothing
+ha
+plot(ha) # the red line is the fitted value
+```
+
+```{r num_4_c_2}
+fo=forecast(ho)
+tsdisplay(fo$residual)
+Box.test(fo$residual, type="Box-Pierce")
+
+fa=forecast(ha)
+tsdisplay(fa$residual)
+Box.test(fa$residual, type="Box-Pierce")
+```
+
+```{r num_4_c_3}
+accuracy(fo)
+accuracy(fa)
+```
+
+### trend and seasonal effect exist
+
+```{r num_4_d_1}
+ho=HoltWinters(spot.ts4, alpha=0.1) #exponential smoothing
+ho
+plot(ho)
+
+ha=HoltWinters(spot.ts4) #exponential smoothing
+ha
+plot(ha) # the red line is the fitted value
+```
+
+```{r num_4_d_2}
+fo=forecast(ho)
+tsdisplay(fo$residual)
+Box.test(fo$residual, type="Box-Pierce")
+
+fa=forecast(ha)
+tsdisplay(fa$residual)
+Box.test(fa$residual, type="Box-Pierce")
+```
+
+```{r num_4_d_3}
+accuracy(fo)
+accuracy(fa)
+```
+
+RMSE of the optimized alpha is always smaller than RMSE of alpha=0.1. 
+
+In case of only no trend effect and optimized alpha, residual plot doesn't seem to have pattern.
+
+In all cases, several bars are crossing the blue line at ACF and PACF graph.
+
+Plus, p-value is smaller than significance level (0.05) at Box-Pierce test.
+
+Therefore, residuals isn't stationary and independence.
+
+
+To find the best exponential smoothing model for spot data, We must compare RMSE of all models.
+RMSE was the lowest in the model with no trend effect, no seasonal effect and optimized alpha (0.9999339).
+
+## 5.From your best model, find the forecast of next 4 points.
+
+```{r num_5}
+ha=HoltWinters(spot.ts,beta=F, gamma=F) #exponential smoothing
+fa=forecast(ha, h=4)
+fa
+plot(fa,main="80%, 95% significant level for forecasting") 
+lines(fa$fitted, col="red", lty=2, lwd=2)
+
+
+Fa=forecast(ha, h=4, fan=T)
+Fa
+plot(Fa,main="51-99% significant level for forecasting") 
+lines(Fa$fitted,col="red", lty=2, lwd=2)
+```
+
+The next 4 points are all 73.99755 from my best model.

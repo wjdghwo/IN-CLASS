@@ -1,0 +1,146 @@
+---
+title: "time series2"
+author: "hojae"
+date: '2021 3 20 '
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+## Moving average smoothing practice
+
+Moving average at 3, 6, and 12 points for Airpassenger data
+```{r MA}
+data("AirPassengers")
+m3=filter(AirPassengers, filter=rep(1/3,3))
+m6=filter(AirPassengers, filter=rep(1/6,6))
+m12=filter(AirPassengers, filter=rep(1/12,12))
+
+plot(AirPassengers, main="AirPassengers: original data")
+plot(m3, main="3-point moving average")
+plot(m6, main="6-point moving average")
+plot(m12, main="12-point moving average")
+```
+
+For data (dd1), try moving average smoothing and check the residual plot.
+
+```{r dd1_MA4}
+#install.packages("forecast")
+library(forecast)
+
+dd1=matrix(c(1342, 1442, 1252, 1343, 1425, 1362, 1456, 1272, 1243,
+1359,1412, 1253, 1201, 1478, 1322, 1406, 1254, 1289, 1497, 1208))
+dd1.ts=ts(data=dd1, start=c(2006,1), frequency=4)
+dd1.ts
+
+ff=filter(dd1.ts, filter=rep(1,4)/4, method="convolution", sides=1)
+plot(dd1.ts, main="dd1.ts with simple moving average smoothing")
+lines(ff, col="red", lty=2, lwd=2) # simple moving average smoothing
+abline(h=mean(dd1), col="blue") # mean
+
+res=ff[-1:-3,]-dd1.ts[-1:-3,] #remove first three values which are not able to be predicted.
+tsdisplay(res, main="Residuals by MA(4) for dd1")
+Box.test(res, type="Box-Pierce") # H0: TS is independent.
+```
+
+The residual shows no auto correlation after the model MA(4) is applied.
+
+
+## double moving average
+
+```{r dd1_double_MA4}
+ff1=filter(dd1.ts, filter=rep(1,3)/3, method="convolution", sides=1)
+
+ff2=filter(ff1, filter=rep(1,3)/3, method="convolution", sides=1)
+
+plot(dd1.ts, main="dd1.ts with simple moving average smoothing")
+lines(ff2, col="red", lty=2, lwd=2)
+abline(h=mean(dd1), col="blue")
+
+res=ff2[-1:-3,]-dd1.ts[-1:-3,]
+tsdisplay(res, main="Residuals by double MA smoothing")
+Box.test(res, type="Box-Pierce") # H0: TS is independent.
+```
+The residual shows no auto correlation after the double moving average model is applied.
+
+
+## double moving average (2nd method)
+
+```{r dd1_double_MA4_2}
+mm1=ma(dd1.ts, order=4, centre=F) #MA(4) without a center
+mm3=ma(dd1.ts, order=3, centre=T) #MA(3) with a center
+mm4=ma(mm3, order=3, centre=T) #double MA(3) with a center
+
+res3=mm4-dd1.ts
+
+Box.test(res3)
+
+plot(forecast(mm1, h=2),main="forecast simple MA") # forecast
+plot(forecast(mm4, h=2),main="forecast simple MA") # forecast
+
+f1=forecast(mm1, h=1)
+f1
+
+f4=forecast(mm4, h=1)
+f4
+
+accuracy(f1)
+accuracy(f4)
+```
+
+
+## Simple exponential smoothing practice
+
+Let’s fit the simple exponential smoothing practice with alpha=0.1
+
+```{r expo_smoothing}
+ho=HoltWinters(dd1.ts, alpha=0.1, beta=F, gamma=F) #exponential smoothing # (beta=F, gamma=F): no trend and no seasonal effect
+ho
+ho$fitted #fitting value
+plot(ho)
+```
+
+
+Let’s fit the simple exponential smoothing practice with the optimized alpha
+
+```{r expo_smoothing_alpha}
+ha=HoltWinters(dd1.ts,beta=F, gamma=F) #exponential smoothing
+ha
+ha$fitted #fitting value
+plot(ha) # the red line is the fitted value
+```
+
+Try a residual analysis:
+
+```{r residual_smoothing}
+fa=forecast(ha)
+names(fa)
+fa$fitted
+fa$residuals
+tsdisplay(fa$residual)
+Box.test(fa$residual, type="Box-Pierce") # p-value = 0.1496 : independent
+hist(fa$residuals, 10, probability=T, col="light blue", xlab="Time", ylab="Residuals", main="Histogram of Residuals")
+points(density (fa$residuals[-1], bw=30), type='l', col="red", lwd=2)
+title("\n \n - simple exponential smoothing")
+```
+
+The forecasting result:
+
+```{r forecast_smoothing}
+fa=forecast(ha, h=4) # forecasting four time points
+fa
+accuracy(fa)
+
+plot(forecast(ha, h=4)) # shows 80%, 95% significant level for forecasting
+lines(fa$fitted, col="red", lty=2, lwd=2)
+
+plot(forecast(ha, h=4, fan=T)) # shows 51-99% significant level for forecasting
+lines(fa$fitted, col="red", lty=2, lwd=2)
+```
+
+
+
+
+
+

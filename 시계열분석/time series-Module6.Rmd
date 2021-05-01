@@ -1,0 +1,108 @@
+---
+title: "time series-Module6"
+author: "hojae"
+date: '2021 5 1 '
+output: html_document
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Load libraries
+
+```{r library, warning=F, message=F}
+library(tidyverse)
+library(ggplot2)
+library(forecast)
+library(gridExtra)
+```
+
+
+## MA(1) simulation
+```{r MA1}
+#MA(1)
+y1<- arima.sim(n = 100, list(ma = 0.4))
+plot1<-autoplot(y1)+ggtitle("MA(1) with theta=0.4")
+
+y2<- arima.sim(n = 100, list(ma = 0.8))
+plot2<-autoplot(y2)+ggtitle("MA(1) with theta=0.8")
+
+y3<- arima.sim(n = 100, list(ma = -0.3))
+plot3<-autoplot(y3)+ggtitle("MA(1) with theta=-0.3")
+
+y4<- arima.sim(n = 100, list(ma = -0.6))
+plot4<-autoplot(y4)+ggtitle("MA(1) with theta=-0.6")
+
+grid.arrange(plot1,plot2, plot3, plot4, ncol=2)
+
+
+ggAcf(y1)+ggtitle("ACF of MA(1) with theta=0.4")->p1
+ggPacf(y1)+ggtitle("PACF of MA(1) with theta=0.4")->p2
+#grid.arrange(p1,p2,ncol=2)
+
+
+ggAcf(y2)+ggtitle("ACF of MA(1) with theta=0.8")->p3
+ggPacf(y2)+ggtitle("PACF of MA(1) with theta=0.8")->p4
+#grid.arrange(p3,p4,ncol=2)
+
+
+grid.arrange(p1, p2, p3,p4,ncol=2)
+
+
+ggAcf(y3)+ggtitle("ACF of MA(1) with theta=-0.3")->p5
+ggPacf(y3)+ggtitle("PACF of MA(1) with theta=-0.3")->p6
+
+ggAcf(y4)+ggtitle("ACF of MA(1) with theta=-0.6")->p7
+ggPacf(y4)+ggtitle("PACF of MA(1) with theta=-0.6")->p8
+
+
+grid.arrange(p5, p6, p7,p8,ncol=2)
+```
+시뮬레이션 결과를 살펴보면 MA모형은 오차의 합으로 이루어져 있어 AR모형과 달리 이론과는 항상 일치하진 않는다. 하지만 어느정도 일치한다.
+
+차수가 높아지거나 ARMA모형 등 모형이 점점 복잡해질수록 더 모형을 산정하기 어렵다.
+
+
+
+## MA(2) simulation
+```{r MA2}
+z1 <- arima.sim(n = 100, list(ma = c(0.6, -0.3)))
+z2 <- arima.sim(n = 100, list(ma = c(-0.5, -0.4)))
+z3<- arima.sim(n = 100, list(ma = c(1.8, 0.9)))
+z4<- arima.sim(n = 100, list(ma = c(-1.2, 0.8)))
+
+plot9<-autoplot(z1)+ggtitle("MA(2) with theta1=0.2, theta2=0.4")
+plot10<-autoplot(z2)+ggtitle("MA(2) with theta1=-0.2, theta2=0.6")
+plot11<-autoplot(z3)+ggtitle("MA(2) with theta1=-0.5, theta2=-0.7")
+plot12<-autoplot(z4)+ggtitle("MA(2) with theta1=1, theta2=-0.9")
+
+grid.arrange(plot9,plot10, plot11, plot12,ncol=2)
+
+
+
+ggAcf(z1)+ggtitle("ACF and PACF of MA(2)")->p1
+ggPacf(z1)+ggtitle("theta1=0.2, theta2=0.4")->p2
+grid.arrange(p1,p2,ncol=2)
+
+
+ggAcf(z2)+ggtitle("ACF and PACF of MA(2)")->p3
+ggPacf(z2)+ggtitle("theta1=-0.2, theta2=0.6")->p4
+grid.arrange(p3,p4,ncol=2)
+
+grid.arrange(p1, p2, p3,p4,ncol=2)
+
+
+
+ggAcf(z3)+ggtitle("ACF and PACF of MA(2)")->p5
+ggPacf(z3)+ggtitle("theta1=-0.5, theta2=-0.7")->p6
+
+
+ggAcf(z4)+ggtitle("ACF and PACF of MA(2)")->p7
+ggPacf(z4)+ggtitle("theta1=1, theta2=-0.9")->p8
+
+
+grid.arrange(p5, p6, p7,p8,ncol=2)
+
+```

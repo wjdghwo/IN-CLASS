@@ -1,0 +1,140 @@
+---
+title: "timeserise_1"
+author: "hojae"
+date: '2021 3 8 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Module-1 Time series practice
+
+There are five time series data set. The first data set (dd1) is a random variation time series
+
+```{r dd1}
+#dd1
+
+dd1=matrix(c(1342,1442,1252,1343,1425,1362,1456,1272,1243,1359,1412,1253,1201,1478,1322,1406,1254,1289,1497,1208))
+dd1.ts=ts(data = dd1, start = c(2006,1), frequency = 4)
+dd1.ts
+plot(dd1.ts, mai='Random variation Time Series')
+
+```
+
+
+The second data set (dd2) is a seasonal variation time series
+```{r dd2}
+#dd2
+
+dd2=matrix(c(1142,1242,1452,1543,1125,1262,1456,1572,1143,1259,1462,1553,1121,1258,1472,1546,1154,1249,1477,1548))
+dd2.ts=ts(data = dd2, start = c(2006,1), frequency = 4)
+dd2.ts
+plot(dd2.ts, mai='Seasonal variation Time Series')
+```
+
+
+The third data set (dd3) is a trend variation time series
+```{r dd3}
+#dd3
+
+dd3=matrix(c(1142,1242,1252,1343,1225,1562,1356,1572,1343,1459,1412,1453,1401,1478,1322,1606,1554,1589,1597,1408))
+dd3.ts=ts(data = dd3, start = c(2006,1), frequency = 4)
+dd3.ts
+plot(dd3.ts, mai='Trend variation Time Series')
+```
+
+
+The fourth data set (dd4) is a seasonal and trend variation time series
+```{r dd4}
+#dd4
+
+dd4=matrix(c(1142,1242,1452,1543,1225,1362,1556,1672,1343,1459,1662,1753,1421,1558,1722,1846,1554,1649,1877,1948))
+dd4.ts=ts(data = dd4, start = c(2006,1), frequency = 4)
+dd4.ts
+plot(dd4.ts, mai='Seasonal Trend variation Time Series')
+```
+
+
+The last data set (dd5) is a cyclinical variation time series
+```{r dd5}
+#dd5
+
+dd5=matrix(c(1142,1242,1452,1543,1225,1362,1556,1672,1343,1459,1662,1753,1221,1358,1572,1646,1154,1249,1477,1548))
+dd5.ts=ts(data = dd5, start = c(2006,1), frequency = 4)
+dd5.ts
+plot(dd5.ts, mai='Cyclinical variation Time Series')
+```
+
+## Stationary
+
+Let's generate a white nose series.
+
+```{r WN}
+WN <- runif(100, min = -0.5, max = 0.5)
+WN.ts <- ts(data=WN, start = c(1,1), frequency = 1)
+plot(WN.ts, mai="White noise")
+abline(h=0)
+```
+
+
+The ACF and PACF plot show that the generated WN.ts is stationary.
+```{r stationary}
+acf(WN.ts, main="ACF")
+pacf(WN.ts, main="ACF")
+```
+
+
+Testing if wn.ts is satisfying "stationary"
+```{r stationary-test}
+tseries::kpss.test(WN.ts, null="Level")
+```
+H0 : Data has Stationarity when except Level
+p-value = 0.1
+=> We cannot reject H0
+
+
+
+## Non-Stationary
+
+Let's generate a random walk series, which is non-stationary
+
+```{r RW}
+at <- runif(100, min = -0.5, max = 0.5)
+yt <- runif(100, min = -0.5, max = 0.5)
+for(i in 2:100){
+  yt[i]=yt[i-1]+at[i]
+}
+
+yt.ts <- ts(data=yt)
+plot(yt.ts, mai="Random walk")
+abline(h=0)
+```
+
+
+The ACF and PACF plot show that the generated random walk process (yt.ts) is non stationary.
+```{r non-stationary}
+acf(yt.ts, main="ACF")
+pacf(yt.ts, main="ACF")
+```
+
+
+KPSS test for stationary
+```{r nonstationary-test}
+tseries::kpss.test(yt.ts, null="Level")
+tseries::kpss.test(yt.ts, null="Trend")
+```
+H0 : Data has level stationary. (tseries::kpss.test(yt.ts, null="Level"))
+p-value = 0.1
+=> We cannot reject H0
+
+H0 : Data has trend stationary. (tseries::kpss.test(yt.ts, null="Trend"))
+p-value = 0.01
+=> We can reject H0, it has trend
+
+
+
+
+
+

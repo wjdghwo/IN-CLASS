@@ -1,0 +1,363 @@
+---
+title: "time series3"
+author: "hojae"
+date: '2021 3 28 '
+output: html_document
+---
+
+```{r tidyverse, warning=F, message=F}
+
+# load libraries
+#install.packages('seasonal')
+#install.packages('fpp')
+library(tidyverse)
+library(ggplot2)
+library(forecast)
+library(fpp)
+library(aTSA)
+library(seasonal)
+library(timsac)
+```
+
+```{r pipe line}
+#pipe line (%>%) %>% Ctrl+Shift+M 
+
+round(sqrt(85),2)
+
+sqrt(85) %>% round(2)
+```
+
+In computing, a pipeline, also known as a data pipeline, is a set of data processing elements connected in series, where the output of one element is the input of the next one. The elements of a pipeline are often executed in parallel or in time-sliced fashion.
+
+
+```{r data}
+
+autoplot(AirPassengers) # easily draw TSA plot
+
+AirPassengers %>% autoplot()
+
+# plotting different way
+AirPassengers %>%
+  stl(t.window=13, s.window="periodic", robust=TRUE) %>%
+  autoplot()
+
+# without pipeline
+?autoplot()
+autoplot(stl(AirPassengers, t.window=13, s.window="periodic", robust=TRUE))
+```
+
+Pipeline can save the storage space.
+
+# Classical decomposition
+- The classical decomposition method originated in the 1920s.
+
+- It is a relatively simple procedure, and forms the starting point for most other methods of time series decomposition.
+
+- There are two forms of classical decomposition: an additive decomposition and a multiplicative decomposition.
+
+- These are described below for a time series with seasonal period (e.g., $m = 4$ for quarterly data, $m = 12$
+for monthly data, $m = 7$ for daily data with a weekly pattern).
+
+- In classical decomposition, we assume that the seasonal component is constant from year to year.
+For multiplicative seasonality, the values that form the seasonal component are sometimes called the “seasonal indices”.
+
+## Decomposition of time series data - additive model
+```{r decomp}
+
+
+dd2=matrix(c(1142, 1242, 1452, 1543, 1125, 1262, 1456, 1572, 1143, 1259,
+1462, 1553, 1121, 1258, 1472, 1546, 1154, 1249, 1477, 1548))
+dd2.ts=ts(data=dd2, start=c(2006,1), frequency=4)
+
+
+dd4=matrix(c(1142, 1242, 1452, 1543, 1225, 1362, 1556, 1672, 1343, 1459,
+1662, 1753, 1421, 1558, 1772, 1846, 1554, 1649, 1877, 1948))
+dd4.ts=ts(data=dd4, start=c(2006,1), frequency=4)
+
+plot(decompose(dd2.ts, type="additive")) # additive model
+plot(decompose(dd4.ts, type="additive")) # additive model
+
+
+#decomposition
+dd=decompose(dd4.ts, type="additive")
+
+#decomposition results
+names(dd)
+
+
+dd$seasonal # seasonal effects
+
+dd$trend # trend effects
+
+dd$random #random variation effects
+
+dd_noseasonal=dd4-dd$seasonal # remove seasonal effects
+
+dd_notrend=dd4-dd$trend # remove trend effects
+
+
+plot(dd_noseasonal, main="TS without seasonal effects")
+
+plot(dd_notrend, main="TS without trend effects")
+
+```
+
+
+## Decomposition of time series data - multiplicative model
+
+```{r decomp2}
+
+#decomposition
+dd_m=decompose(dd4.ts, type="multiplicative")
+
+#decomposition results
+names(dd_m)
+
+dd_m$seasonal # seasonal effects
+
+dd_m$trend # trend effects
+
+dd_m$random #random variation effects
+
+ddM_noseasonal=dd4/dd_m$seasonal # remove seasonal effects*
+
+ddM_notrend=dd4/dd_m$trend # remove trend effects*
+
+
+plot(ddM_noseasonal, main="TS without seasonal effects")
+
+plot(ddM_notrend, main="TS without trend effects")
+
+```
+
+
+## Decomposition of Airpassenger data
+Decompose Airpassenger data:
+
+
+```{r airpass-decomp}
+data("AirPassengers")
+ddd<-decompose(AirPassengers, type="multiplicative")
+
+plot(decompose(AirPassengers, type="additive"))
+plot(decompose(AirPassengers, type="multiplicative"))
+plot(AirPassengers/ddd$seasonal, main="Remove seasonal variation")
+plot(AirPassengers/ddd$trend, main="Remove trend variation")
+
+
+AirPassengers %>% decompose(type="additive") %>%
+  autoplot() +
+  ggtitle("Classical additive decomposition of airPassengers data")
+
+AirPassengers %>% decompose(type="multiplicative") %>%
+  autoplot() +
+  ggtitle("Classical multiplicative decomposition of airPassengers data")
+
+```
+
+Diagnosis:
+
+```{r airpass-diagnosis, warning=F, message=F}
+
+dda=decompose(AirPassengers, type="additive")
+
+ddm=decompose(AirPassengers, type="multiplicative")
+
+tseries::kpss.test(dda$random, null = "Level") #Stationary for random variation after trend and seasonal effects were removed
+
+tseries::kpss.test(ddm$random, null = "Level") #Stationary for random variation after trend and seasonal effects were removed
+
+tsdisplay(dda$random, main="Random/ Additive model")
+tsdisplay(ddm$random, main="Random/ Multiplicative model")
+```
+
+Additive and multiplicative decomposition model are stationary for random variation after trend and seasonal effects were removed. 
+
+So, it's explaining trend and seasonal effects well.
+
+When you test the stationary, you must check both `tseries::kpss.test` and `tsdisplay`.
+
+`tseries::kpss.test` : stationary test
+`tsdisplay` : ACF PACF graph
+
+
+# SEATS decomposition
+- “SEATS” stands for “Seasonal Extraction in ARIMA Time Series” (ARIMA models will be discussed
+later).
+
+- This procedure was developed at the Bank of Spain, and is now widely used by government agencies
+around the world.
+
+- The procedure works only with **quarterly and monthly** data. So seasonality of other kinds, such as daily data, or hourly data, or weekly data, require an alternative approach.
+
+```{r SEATS, warning=F, message=F}
+?seas()
+
+data(elecequip)
+autoplot(elecequip)
+
+elecequip %>% seas() %>%
+autoplot() +
+  ggtitle("SEATS decomposition of electrical equipment index")
+
+elecequip %>% seas()->seats_elece
+```
+
+# X11 decomposition
+
+## X11 decomposition with r-packages with Tidyverse and ggplot2
+
+- X11 decomposition is based on classical decomposition, but includes **many extra steps and features** in order to overcome the drawbacks of classical decomposition.
+
+- In particular, trend-cycle estimates are available for all observations including the end points, and the seasonal component is allowed to vary slowly over time.
+
+- X11 also has some sophisticated methods for handling trading day variation, holiday effects and the effects of known predictors.
+
+- It handles both **additive and multiplicative decomposition**.
+
+- The process is entirely automatic and tends to be **highly robust** to outliers and level shifts in the time series.
+
+
+```{r X11, warning=F, message=F}
+
+#Manufacture of electrical equipment: computer, electronic and optical products.
+?elecequip
+
+#TSA plot
+autoplot(elecequip)
+
+# seasonal effect fitting
+elecequip %>% seas(x11="") -> fit
+
+
+#A decomposition of the new orders index for electrical equipment.
+autoplot(fit) +
+  ggtitle("X11 decomposition of electrical equipment index")
+
+
+#the trend-cycle component and the seasonally adjusted data, along with the original data.
+autoplot(elecequip, series="Data") +
+  autolayer(trendcycle(fit), series="Trend") +
+  autolayer(seasadj(fit), series="Seasonally Adjusted") +
+  xlab("Year") + ylab("New orders index") +
+  ggtitle("Electrical equipment manufacturing (Euro area)") +
+  scale_colour_manual(values=c("gray","blue","red"),
+                      breaks=c("Data","Seasonally Adjusted","Trend"))
+```
+
+'Seasonally Adjusted' has less fluctuation than before.
+
+Therefore 'Electrical equipment manufacturing' data is heavily influenced by the seasonal variation.
+
+```{r X11_2, warning=F, message=F}
+#Seasonal sub-series plot of the seasonal component from the X11 decomposition of the new orders index for electrical equipment.
+fit %>% seasonal() %>% ggsubseriesplot() + ylab("Seasonal")
+```
+
+blue line : seasonal effect of each month.
+
+black line : Time-series graphs with constants.
+
+```{r X11_3, warning=F, message=F}
+#fit %>% seasonal()
+#fit %>% trendcycle()
+#fit %>% remainder()
+#fit %>% seasadj()
+```
+
+Given the output from the `seas()` function, 
+
+`seasonal()` will extract the seasonal component, 
+
+`trendcycle()` will extract the trend-cycle component, 
+
+`remainder()` will extract the remainder component, and 
+
+`seasadj()`will compute the seasonally adjusted time series.
+
+
+# STL (Seasonal Decomposition of Time Series by Loess)
+
+- STL is a versatile and robust method for decomposing time series.
+
+- STL is an acronym for “Seasonal and Trend decomposition using Loess”, while **Loess is a method for estimating nonlinear relationships**. The STL method was developed by Cleveland, Cleveland, McRae, & Terpenning (1990).
+
+- STL has several advantages over the classical, SEATS and X11 decomposition methods:
+
+Unlike SEATS and X11, **STL will handle any type of seasonality, not only monthly and quarterly data.**
+
+- The seasonal component is allowed to change **over time, and the rate of change can be controlled by the user.**
+
+- **The smoothness of the trend-cycle can also be controlled by the user.**
+
+- It can be **robust to outliers** (i.e., the user can specify a robust decomposition), so that occasional unusual observations will not affect the estimates of the trend-cycle and seasonal components. They will, however, affect the remainder component.
+
+- On the other hand, STL has some disadvantages. In particular, it does **not handle trading day or calendar variation automatically**, and it **only provides facilities for additive decompositions.**
+
+```{r air_STL}
+air_stl=stl(AirPassengers,'periodic')
+air_stl
+
+plot(air_stl)
+air_ss=seasadj(air_stl) #Returns seasonally adjusted data constructed by removing the seasonal component.
+
+seasonal_index=sindexf(air_stl, h=24) # Returns vector containing the seasonal index for h future periods.
+seasonal_index
+
+autoplot(air_stl) # decomposition plot
+
+forecast_air<-forecast::forecast(air_stl)
+
+forecast_air
+
+autoplot(forecast_air)
+```
+
+## Visualization of TSA, seasonal graphs using ggplot2
+```{r air_STL}
+data(a10)
+
+?a10
+
+head(a10)
+str(a10)
+glimpse(a10)
+
+# ACF
+ggAcf(a10)
+ggAcf(a10, lag=48)
+
+# PACF
+ggPacf(a10)
+ggPacf(a10, lag=48)
+
+
+#Monthly sales of antidiabetic drugs in Australia.
+autoplot(a10) +
+  ggtitle("Antidiabetic drug sales") +
+  ylab("$ million") +
+  xlab("Year")
+
+#Seasonal plot of monthly antidiabetic drug sales in Australia.
+ggseasonplot(a10, year.labels=TRUE, year.labels.left=TRUE) +
+  ylab("$ million") +
+  ggtitle("Seasonal plot: antidiabetic drug sales")
+
+#Polar seasonal plot of monthly antidiabetic drug sales in Australia.
+ggseasonplot(a10, polar=TRUE) +
+  ylab("$ million") +
+  ggtitle("Polar seasonal plot: antidiabetic drug sales")
+
+
+
+#Seasonal subseries plot of monthly antidiabetic drug sales in Australia.
+ggsubseriesplot(a10) +
+  ylab("$ million") +
+  ggtitle("Seasonal subseries plot: antidiabetic drug sales")
+```
+
+
+
+
+
+

@@ -1,0 +1,226 @@
+---
+title: "time series-Module7"
+author: "hojae"
+date: '2021 5 1 '
+output: html_document
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Load libraries
+```{r library, warning=F, message=F}
+library(tidyverse)
+library(ggplot2)
+library(forecast)
+library(gridExtra)
+```
+
+
+## ARMA(1,1) simulation
+```{r arma_1_1}
+# list
+
+x<-c(1,2,3)
+y<-c(3,4,5)
+x[1]
+
+l<-list(c(1,2,3), c(3,4,5)) # list : 벡터를 원소로 저장
+l[[1]]
+l[[2]]
+
+ARMA_list<-list(order = c(1,0,1), ma=0.2, ar=0.3)
+ARMA_list
+ARMA_list[[1]]
+ARMA_list$order
+
+
+
+#ARIMA(p,d,q)
+#ARMA(1,1)=ARIMA(1,0,1)
+y1<- arima.sim(list(order = c(1,0,1), ma=0.2, ar=0.3), n = 100)
+plot1<-autoplot(y1)+ggtitle("ARMA(1,1) with theta1=0.2, phi1=0.3")
+
+y2<- arima.sim(list(order = c(1,0,1), ma=-0.4, ar=0.9), n = 100)
+plot2<-autoplot(y2)+ggtitle("ARMA(1,1) with theta1=-0.4, phi1=0.9")
+
+y3<- arima.sim(list(order = c(1,0,1), ma=0.9, ar=0.6), n = 100)
+plot3<-autoplot(y3)+ggtitle("ARMA(1,1) with theta1=0.9, phi1=0.6")
+
+y4<- arima.sim(list(order = c(1,0,1), ma=-0.2, ar=-0.3), n = 100)
+plot4<-autoplot(y4)+ggtitle("ARMA(1,1) with theta1=-0.2, phi1=-0.3")
+
+grid.arrange(plot1,plot2, plot3, plot4, ncol=2)
+
+
+ggAcf(y1)+ggtitle("ACF and PACF of ARMA(1,1) ")->p1
+ggPacf(y1)+ggtitle("with theta1=0.2, phi1=0.3")->p2
+#grid.arrange(p1,p2,ncol=2)
+
+
+ggAcf(y2)+ggtitle("ACF and PACF of ARMA(1,1)")->p3
+ggPacf(y2)+ggtitle("with theta1=-0.4, phi1=0.9")->p4
+#grid.arrange(p3,p4,ncol=2)
+
+grid.arrange(p1, p2, p3,p4,ncol=2)
+
+ggAcf(y3)+ggtitle("ACF and PACF of ARMA(1,1)")->p5
+ggPacf(y3)+ggtitle("with theta1=0.9, phi1=0.6")->p6
+
+ggAcf(y4)+ggtitle("ACF and PACF of ARMA(1,1)")->p7
+ggPacf(y4)+ggtitle("with theta1=-0.2, phi1=-0.3")->p8
+
+grid.arrange(p5, p6, p7,p8,ncol=2)
+
+```
+
+
+
+## Simulations and ARMA model fitting
+```{r Simulations}
+## simulations
+set.seed(354)
+timeseries=arima.sim(list(order = c(1,0,2), ma=c(0.32,0.47), ar=0.8), n = 50)+20
+autoplot(timeseries)+ggtitle("ARMA(1,2)")->p1
+ggAcf(timeseries)+ggtitle("ACF of ARMA(1,2)")->p2
+ggPacf(timeseries)+ggtitle("PACF of ARMA(1,2)")->p3
+grid.arrange(p1,p2,p3,ncol=2)
+```
+
+
+## find the best model
+```{r Simulations2}
+## partition into train and test
+train_series=timeseries[1:40]
+test_series=timeseries[41:50]
+
+## make arima models for training data
+#?arima
+arimaModel_1=arima(train_series, order=c(0,0,2)) #MA(2)
+arimaModel_2=arima(train_series, order=c(1,0,0)) #AR(1)
+arimaModel_3=arima(train_series, order=c(1,0,2)) #ARMA(1,2)
+#arimaModel_4=arima(train_series, order=c(3,0,5)) #ARMA(3,5)
+#모형이 복잡해질수록 AIC작아짐 but forcasting 능력은 떨어짐
+
+## look at the parameters
+print(arimaModel_1);print(arimaModel_2);print(arimaModel_3)
+
+## look at roots of fitted models
+autoplot(arimaModel_1)
+autoplot(arimaModel_2)
+autoplot(arimaModel_3)
+# 단위근안에 모두 근이 위치하므로 정상성을 갖는 모형으로 피팅됨
+
+
+## forecasting
+forecast1<-forecast::forecast(arimaModel_1)
+forecast2<-forecast::forecast(arimaModel_2)
+forecast3<-forecast::forecast(arimaModel_3)
+
+
+
+ggplot(data=data.frame(forecast1$residuals), aes(forecast1.residuals)) +
+  geom_histogram() ->h1
+
+
+ggplot(data=data.frame(forecast2$residuals), aes(forecast2.residuals)) +
+  geom_histogram() ->h2
+
+
+ggplot(data=data.frame(forecast3$residuals), aes(forecast3.residuals)) +
+  geom_histogram() ->h3
+
+
+grid.arrange(h1,h2,h3,ncol=2)
+
+
+
+### test for residuals : normality
+shapiro.test(arimaModel_1$residuals)
+shapiro.test(arimaModel_2$residuals)
+shapiro.test(arimaModel_3$residuals)
+
+# NORMALITY IS MET on residuals
+
+
+### test for residuals : independence
+Box.test(arimaModel_1$residuals,type = "Ljung-Box")
+Box.test(arimaModel_2$residuals,type = "Ljung-Box")
+Box.test(arimaModel_3$residuals,type = "Ljung-Box")
+# 귀무가설 기각 못하므로 모두 독립
+
+
+
+### test for residuals(위에 두 과정 한 번에 시행)
+checkresiduals(arimaModel_1)
+checkresiduals(arimaModel_2)
+checkresiduals(arimaModel_3)
+
+
+
+
+
+
+### forecast
+
+autoplot(forecast1)+ggtitle("arima(0,0,2)")->p5
+autoplot(forecast2)+ggtitle("arima(1,0,0)")->p6
+autoplot(forecast3)+ggtitle("arima(1,0,2)")->p7
+grid.arrange(p5,p6,p7,ncol=2)
+
+
+df.forecast1<-data.frame(forecast1)
+df.forecast2<-data.frame(forecast2)
+df.forecast3<-data.frame(forecast3)
+
+
+
+### Checking the accuracy of a model by regression evaluation
+
+accuracy(arimaModel_1)
+accuracy(arimaModel_2)
+accuracy(arimaModel_3)
+
+
+
+
+### accuracy test for test set
+#install.packages("DMwR2")
+library(DMwR2)
+
+accmeasures1=regr.eval(test_series, df.forecast1$Point.Forecast)
+accmeasures2=regr.eval(test_series, df.forecast2$Point.Forecast)
+accmeasures3=regr.eval(test_series, df.forecast3$Point.Forecast)
+accMeasure=rbind(accmeasures1,accmeasures2,accmeasures3)
+print(accMeasure)
+
+
+### Auto Arima modeling - strict modeling
+AutoArimaModel=auto.arima(train_series)
+AutoArimaModel
+plot(forecast(AutoArimaModel,h=20))
+
+
+auto.arima(timeseries)
+
+```
+
+데이터를 가장 잘 이해하는 모델은 ARMA(1,2)이지만 forcasting 능력은 가장 떨어졌다. 예측은 어려움
+
+'auto.arima(timeseries)' 혼자서 여러모델을 돌려보고 가장 AIC가 작은 모델을 말해줌 
+또한 특성방정식의 근이 너무 1에 가까워지는 모델을 제외함
+
+데이터가 추가되면 또 추천되는 모델이 달라짐 -> simulation한 모델 값 그대로 결과가 나오지는 않는다.
+
+
+
+베스트 모델 및 예측은 어렵지만 데이터의 n이 커지면 피팅 결과는 좋아질 수 있다.
+
+ARIMA의 p, d, q가 커지면 AIC가 작아지만 overfitting되어 forcasting 성능은 낮을 수도 있다.
+
+유의, 주의할 방법을 찾고 / 최고의 forcasting 방법은 없음
+하지만 현재 데이터에서의 최선의 모델은 찾을 수 있음

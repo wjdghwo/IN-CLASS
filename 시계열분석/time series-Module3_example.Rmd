@@ -1,0 +1,125 @@
+---
+title: "time series3_example"
+author: "hojae"
+date: '2021 3 28 '
+output: html_document
+---
+
+# From textbook
+
+## Example 5
+
+Load the data.
+
+```{r}
+?UKgas
+data(UKgas)
+head(UKgas, 8)
+tail(UKgas, 8)
+```
+
+Decomposition
+
+```{r}
+a<-decompose(UKgas, type="multiplicative")
+?decompose
+a$x
+a$seasonal
+a$trend
+a$random
+a$figure # The estimated seasonal figure only.
+a$type
+plot(a)
+```
+
+Forecasting with Holt-Winter’s method exponential smoothing.
+
+```{r}
+# alpha is found to be optimized
+HW<-HoltWinters(UKgas, seasonal="mult")
+HW
+HW$SSE
+```
+
+평활모수 알파를 옵티마이즈 함에 있어서 한 단계 이전 예측오차의 제곱합을 최소화 하도록 선택했다.
+
+```{r}
+
+# alpha=0.2
+HW_alpha<-HoltWinters(UKgas, alpha=0.2, seasonal="mult")
+HW_alpha$SSE
+
+plot(HW)
+plot(HW_alpha)
+
+# forecasting
+(USgas.pred<-predict(HW, n.ahead=4)) # 4 point
+
+ts.plot(UKgas, USgas.pred, lty=1:2)
+
+library(forecast)
+f<-forecast(HW, 4)
+f
+plot(f)
+
+```
+
+## Example 6
+
+Holt-Winters method
+
+```{r}
+
+?USAccDeaths
+head(USAccDeaths, 20)
+
+## starting httpd help server ... done
+
+# Simple Exponential Smoothing - level
+
+HW1<-HoltWinters(USAccDeaths, beta=FALSE, gamma=FALSE) # beta=0, gamma=0
+HW1
+
+# Double ES - level, trend
+
+HW2<-HoltWinters(USAccDeaths, gamma=FALSE) # gamma=0
+HW2
+
+# Triple ES - level, trend, seasonal
+
+HW3<-HoltWinters(USAccDeaths) # gamma=0
+HW3
+```
+
+Comparison of performances
+
+```{r}
+library(forecast)
+accuracy(forecast(HW1, 3))
+accuracy(forecast(HW2, 3))
+accuracy(forecast(HW3, 3))
+```
+
+Forecasting
+
+```{r}
+library(forecast)
+plot(forecast(HW1, 3))
+plot(forecast(HW2, 3))
+plot(forecast(HW3, 3))
+```
+
+Exponential smoothing with `ets{forecast}`
+
+```{r}
+?ets
+fit<-ets(USAccDeaths)
+plot(forecast(fit))
+```
+
+
+
+
+
+
+

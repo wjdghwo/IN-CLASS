@@ -1,0 +1,78 @@
+---
+title: "Homework4_201611531"
+author: "Jeong Hojae"
+date: '2021 4 20 '
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r library}
+library(tidyverse)
+library(ggplot2)
+library(forecast)
+library(gridExtra)
+```
+
+## 1. Simulate an AR(1) process with phi=0.8 (n=1000) and show the time series plot, SACF graph and SPACF graph.
+
+```{r sol1}
+y1=arima.sim(n=1000, list(ar=0.8))
+autoplot(y1) + ggtitle("AR(1) with phi=0.8 ")
+ggAcf(y1)+ggtitle("SACF with phi=0.8")
+ggPacf(y1)+ggtitle("SPACF with phi=0.8")
+```
+
+Time series plot don't get out of average. And it shows high relation with previous data value. It is stationary time series.
+
+SACF graph shows exponential decline.
+
+SPACF graph cuts-off after 2nd lag.
+
+
+
+## 2. Repeat (1) process in case of phi=-0.8.
+
+```{r sol2}
+y2=arima.sim(n=1000, list(ar=-0.8))
+autoplot(y2) + ggtitle("AR(1) with phi=-0.8 ")
+ggAcf(y2)+ggtitle("SACF with phi=-0.8")
+ggPacf(y2)+ggtitle("SPACF with phi=-0.8")
+```
+
+Time series plot don't get out of average. And it shows high relation with previous data value. It is stationary time series. Also, there are more to vibrate than 1 graph because phi is negative number.
+
+SACF graph vibrates and decreases exponential decline.
+
+SPACF graph vibrates and cuts-off after 2nd lag.
+
+
+## 3. Simulate an AR(2) process with randomly chosen phi1 and phi2. And Repeat (1) process.
+
+
+```{r sol3}
+set.seed(201611531)
+phi1=runif(1,-1,1)
+phi2=runif(1,-1,1)
+phi1
+phi2
+
+
+y3<- arima.sim(n=1000, list(ar=c(phi1, phi2)))
+autoplot(y3) + ggtitle("AR(2) with phi1=0.172035, phi2=0.5103432")
+ggAcf(y3)+ggtitle("SACF with phi1=0.172035, phi2=0.5103432")
+ggPacf(y3)+ggtitle("SPACF with phi1=0.172035, phi2=0.5103432")
+```
+
+Time series plot don't get out of average. And it shows high relation with previous data value. It is stationary time series. Also, there are more to vibrate than 1 graph but it's not more to vibrate than 2 graph.
+
+SACF graph decreases exponential decline. It has a real root.
+
+SPACF graph cuts-off after 3rd lag because it's AR(2) model.
+
+
+
+
