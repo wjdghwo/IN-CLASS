@@ -314,7 +314,7 @@ autoplot(forecast_air)
 ```
 
 ## Visualization of TSA, seasonal graphs using ggplot2
-```{r air_STL}
+```{r air_STL_1}
 data(a10)
 
 ?a10
