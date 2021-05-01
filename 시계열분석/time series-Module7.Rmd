@@ -189,8 +189,9 @@ accuracy(arimaModel_3)
 
 
 ### accuracy test for test set
-#install.packages("DMwR2")
-library(DMwR2)
+#install.packages("DMwR")
+library(DMwR)
+# DMwR은 CRAN에서 2021-3월 이후로 사용 중지됨 제공된 zip파일 다운
 
 accmeasures1=regr.eval(test_series, df.forecast1$Point.Forecast)
 accmeasures2=regr.eval(test_series, df.forecast2$Point.Forecast)
