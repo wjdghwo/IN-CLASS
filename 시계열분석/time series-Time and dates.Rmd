@@ -1,0 +1,555 @@
+---
+title: "Time and dates"
+author: "Jeong Hojae"
+date: '2021 5 21 '
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## 시간과 날짜가 있는 데이터를 어떻게 다루는지 알려주는 자료입니다.
+
+## Loading libraries
+This chapter will focus on the lubridate package, which makes it easier to work with dates and times in R. **lubridate** is helpful when you’re working with dates/times. We will also need `nycflights13` for practice data.
+
+```{r library, message=F, warning=F}
+library(tidyverse)
+library(lubridate)
+library(nycflights13) #사용 할 데이터
+library(dplyr)
+```
+
+## Visualizing time series data
+
+- nasa is a data set in the `GGally` package
+
+- it consists of atmospheric measurements across a grid of locations in Middle America
+
+```{r nasa, message=F, warning=F, out.width ="40%"}
+data(nasa, package="GGally")
+head(nasa)
+```
+
+## Time series
+- for each observational unit we have multiple measurements:
+
+
+```{r nasa1, message=F, warning=F, out.width ="40%"}
+#pipe line %>% (Ctrl+Shift+m)
+
+#head(nasa)
+#nasa %>% head()
+#summary(head(nasa))
+
+#nasa %>%
+# head() %>%
+# summary()
+
+
+
+nasa %>%
+  dplyr::filter(x == 1, y == 1) %>%
+  ggplot(aes(x = time, y = temperature)) + 
+  geom_point()
+```
+
+## Time series 2
+
+- for each observational unit we have multiple measurements,
+
+- which we connect by a line:
+
+```{r nasa2, message=F, warning=F, out.width ="40%"}
+
+nasa %>% dplyr::filter(x == 1, y == 1) %>%
+  ggplot(aes(x = time, y = temperature)) +
+  geom_line()
+```
+
+## Time series 2
+- for each observational unit we have multiple measurements,
+
+- which we connect by a line:
+
+- Each observational unit forms a group, we only connect points within a group by a line.
+
+```{r nasa3, message=F, warning=F, out.width ="40%"}
+
+x<-c(1,2,3,4,5)
+x %in% c(3,5)
+
+nasa %>% dplyr::filter(x == 1, y %in% c(1, 10)) %>%
+  ggplot(aes(x = time, y = temperature, group=id)) + geom_line()
+
+nasa %>% dplyr::filter(x == 1, y %in% c(1, 10)) %>%
+  ggplot(aes(x = time, y = temperature, group=id, color=id)) + geom_line()
+
+
+```
+
+
+## Creating date/times
+
+- There are three types of date/time data that refer to an instant in time:
+
+- A **date**. Tibbles print this as <date>.
+
+- A **time** within a day. Tibbles print this as <time>.
+
+- A **date-time** is a date plus a time: it uniquely identifies an instant in time (typically to the nearest second). Tibbles print this as `<dttm>`. Elsewhere in R these are called POSIXct, but I don’t think that’s a very useful name.
+
+
+In this chapter we are only going to focus on dates and date-times as R doesn’t have a native class for storing times. If you need one, you can use the **hms** package.
+
+
+
+## Creating date/times
+
+
+```{r data1, message=F, warning=F}
+today()
+
+now()
+```
+
+## Creating date/times from strings
+
+- Date/time data often comes as strings.
+
+- To use them, identify the order in which year, month, and day appear in your dates, then arrange “y”, “m”, and “d” in the same order.
+
+- That gives you the name of the `lubridate` function that will parse your date.
+
+```{r data2, eval=F, message=F, warning=F}
+
+# YYYY-MM-DD
+
+ymd("2017-01-31")
+#> [1] "2017-01-31"
+mdy("January 31st, 2017")
+#> [1] "2017-01-31"
+dmy("31-Jan-2017")
+#> [1] "2017-01-31"
+```
+
+## Creating date/times from strings
+
+
+```{r data3, eval=F, message=F, warning=F}
+ymd(20170131)
+#> [1] "2017-01-31"
+ymd_hms("2017-01-31 20:11:59")
+#> [1] "2017-01-31 20:11:59 UTC"
+mdy_hm("01/31/2017 08:01")
+#> [1] "2017-01-31 08:01:00 UTC"
+ymd(20170131, tz = "UTC") #time zone
+#> [1] "2017-01-31 UTC"
+```
+
+## Creating date/times from individual components
+Instead of a single string, sometimes you’ll have the individual components of the date-time spread across multiple columns. This is what we have in the flights data:
+
+```{r data4, message=F, warning=F}
+flights %>% head()
+
+flights %>%
+  select(year, month, day, hour, minute)
+```
+
+## Creating date/times from individual components
+
+```{r data5, message=F, warning=F}
+flights %>%
+  select(year, month, day, hour, minute) %>%
+  mutate(departure = make_datetime(year, month, day, hour, minute)) %>%
+  mutate(departure2 = make_date(year, month, day)) # 새로운 변수 추가
+
+#?make_date
+```
+
+## Creating date/times from other types
+You may want to switch between a date-time and a date. That’s the job of as_datetime() and `as_date()` :
+
+```{r data9, message=F, warning=F, out.width="40%"}
+as_datetime(today())
+#> [1] "2020-11-10 UTC"
+as_date(now())
+#> [1] "2020-11-10"
+```
+
+## Your turn
+
+
+1. What happens if you parse a string that contains invalid dates?
+
+
+```{r yourturn1-1, message=F, warning=F, out.width="40%"}
+ymd(c("2010-10-10", "bananas"))
+```
+
+시간의 형태가 아닌 데이터를 넣으면 NA처리
+
+
+2. What does the tzone argument to `today()` do? Why is it important?
+
+```{r yourturn2-1, message=F, warning=F, out.width="40%"}
+today()
+as_datetime(today()) # time zone 출력
+```
+
+## Your turn
+
+3. Use the appropriate lubridate function to parse each of the following dates:
+
+```{r yourturn3-1, message=F, warning=F, out.width="40%"}
+d1 <- "January 1, 2010"
+d2 <- "2015-Mar-07"
+d3 <- "06-Jun-2017"
+d4 <- c("August 19 (2015)", "July 1 (2015)")
+d5 <- "12/30/14" # Dec 30, 2014
+```
+
+```{r yourturn3-2, include=F, message=F, warning=F, out.width="40%"}
+mdy(d1)
+#> [1] "2010-01-01"
+ymd(d2)
+#> [1] "2015-03-07"
+dmy(d3)
+#> [1] "2017-06-06"
+mdy(d4)
+#> [1] "2015-08-19" "2015-07-01"
+mdy(d5)
+#> [1] "2014-12-30"
+```
+순서기입만 구분해주면 괄호가 있는 형태도 시간형태로 변환가능
+
+## Date-time components
+
+You can pull out individual parts of the date with the accessor functions `year()`, `month()`, `mday()` (day of the month), `yday()` (day of the year), `wday()` (day of the week), `hour()`, `minute()`, and `second()`.
+
+
+```{r data10, eval=F, message=F, warning=F, out.width="40%"}
+datetime <- ymd_hms("2016-07-08 12:34:56")
+
+# 시간에 각각의 숫자를 추출
+
+year(datetime)
+#> [1] 2016
+month(datetime)
+#> [1] 7
+mday(datetime)
+#> [1] 8
+
+yday(datetime)
+#> [1] 190
+wday(datetime)
+#> [1] 6 # 금요일
+```
+
+## Date-time components
+For `month()` and `wday()` you can set label = TRUE to return the abbreviated name of the month or day of the week. Set `abbr = FALSE` to return the full name.
+
+```{r data10-1, eval=F, message=F, warning=F, out.width="40%"}
+month(datetime, label = TRUE)
+#> [1] Jul
+#> 12 Levels: Jan < Feb < Mar < Apr < May < Jun < Jul < Aug < Sep < ... < Dec
+wday(datetime, label = TRUE, abbr = FALSE)
+#> [1] Friday
+#> 7 Levels: Sunday < Monday < Tuesday < Wednesday < Thursday < ... < Saturday
+```
+
+## Setting components
+
+You can also use each accessor function to set the components of a date/time:
+
+```{r data6, eval=F, message=F, warning=F, out.width="40%"}
+(datetime <- ymd_hms("2016-07-08 12:34:56"))
+#> [1] "2016-07-08 12:34:56 UTC"
+
+year(datetime) <- 2020
+datetime
+#> [1] "2020-07-08 12:34:56 UTC"
+month(datetime) <- 01
+datetime
+#> [1] "2020-01-08 12:34:56 UTC"
+hour(datetime) <- hour(datetime) + 1
+datetime
+#> [1] "2020-01-08 13:34:56 UTC"
+```
+
+날짜를 통한 덧셈, 뺄셈 날짜의 숫자변경이 가능
+
+## Setting components
+
+Alternatively, rather than modifying in place, you can create a new date-time with `update()`. This also allows you to set multiple values at once.
+
+```{r data17, eval=F, message=F, warning=F, out.width="40%"}
+update(datetime, year = 2020, month = 2, mday = 2, hour = 2)
+#> [1] "2020-02-02 02:34:56 UTC"
+
+ymd("2015-02-01") %>%
+update(mday = 03)
+#> [1] "2015-03-02"
+ymd("2015-02-01") %>%
+update(hour = 400)
+#> [1] "2015-02-17 16:00:00 UTC"
+```
+
+바꿀 데이터가 너무 많을 때는 `update()`사용
+
+## Time spans
+You will learn about how arithmetic with dates works, **including subtraction, addition, and division**. Along the way, you’ll learn about three important classes that represent time spans:
+
+- **durations**, which represent an exact number of seconds.
+- **periods**, which represent human units like weeks and months.
+- **intervals**, which represent a starting and ending point.
+
+
+## Durations
+
+In R, when you subtract two dates, you get a difftime object:
+
+```{r time1, message=F, warning=F, out.width="40%"}
+# How old is Hojae?
+h_age <- today() - ymd(19980220)
+h_age
+#> Time difference of 8491 days
+```
+
+##Durations
+
+A difftime class object records a time span of seconds, minutes, hours, days, or weeks. This ambiguity can make difftimes a little painful to work with, so `lubridate` provides an alternative which always uses seconds: the **duration.**
+
+```{r time2, message=F, warning=F, out.width="40%"}
+as.duration(h_age)
+
+```
+
+## Durations
+
+`dxxx()`들은 초단위로 바꿔주는 함수
+
+```{r time3, message=F, warning=F, out.width="40%"}
+dseconds(15)
+#> [1] "15s"
+dminutes(10)
+#> [1] "600s (~10 minutes)"
+dhours(c(12, 24))
+#> [1] "43200s (~12 hours)" "86400s (~1 days)"
+ddays(0:5)
+#> [1] "0s" "86400s (~1 days)" "172800s (~2 days)"
+#> [4] "259200s (~3 days)" "345600s (~4 days)" "432000s (~5 days)"
+dweeks(3)
+#> [1] "1814400s (~3 weeks)"
+dyears(1)
+#> [1] "31557600s (~1 years)"
+```
+
+## Durations
+
+Durations always record the time span in seconds. Larger units are created by converting minutes, hours, days, weeks, and years to seconds at the standard rate (60 seconds in a minute, 60 minutes in an hour, 24 hours in day, 7 days in a week, 365 days in a year).
+
+```{r time4, eval=F, message=F, warning=F, out.width="40%"}
+2 * dyears(1)
+#> [1] "63115200s (~2 years)"
+dyears(1) + dweeks(12) + dhours(15)
+#> [1] "38869200s (~1.23 years)"
+```
+
+## Durations
+
+You can add and subtract durations to and from days:
+
+
+```{r time5, eval=F, message=F, warning=F, out.width="40%"}
+tomorrow <- today() + ddays(1)
+last_year <- today() - dyears(1)
+```
+
+## Durations
+
+However, because durations represent an exact number of seconds, sometimes you might get an unexpected result:
+
+```{r time6, eval=F, message=F, warning=F, out.width="40%"}
+one_pm <- ymd_hms("2016-03-12 13:00:00", tz = "America/New_York")
+
+one_pm
+#> [1] "2016-03-12 13:00:00 EST"
+one_pm + ddays(1)
+#> [1] "2016-03-13 14:00:00 EDT"
+```
+
+Why is one day after 1pm on March 12, 2pm on March 13?! If you look carefully at the date you might also notice that the time zones have changed. Because of DST, March 12 only has 23 hours, so if we add a full days worth of seconds we end up with a different time.
+
+
+##Periods
+
+To solve this problem, `lubridate` provides **periods**. Periods are time spans but don’t have a fixed length in seconds, instead they work with “human” times, like days and months. That allows them to work in a more intuitive way:
+
+```{r time7, eval=F, message=F, warning=F, out.width="40%"}
+one_pm
+#> [1] "2016-03-12 13:00:00 EST"
+one_pm + days(1) # summer time 고려x
+#> [1] "2016-03-13 13:00:00 EDT"
+```
+
+## Periods
+
+Like durations, periods can be created with a number of friendly constructor functions.
+
+
+```{r time8, eval=F, message=F, warning=F, out.width="40%"}
+seconds(15)
+#> [1] "15S"
+minutes(10)
+#> [1] "10M 0S"
+hours(c(12, 24))
+#> [1] "12H 0M 0S" "24H 0M 0S"
+days(7)
+#> [1] "7d 0H 0M 0S"
+months(1:6)
+#> [1] "1m 0d 0H 0M 0S" "2m 0d 0H 0M 0S" "3m 0d 0H 0M 0S" "4m 0d 0H 0M 0S"
+#> [5] "5m 0d 0H 0M 0S" "6m 0d 0H 0M 0S"
+weeks(3)
+#> [1] "21d 0H 0M 0S"
+years(1)
+#> [1] "1y 0m 0d 0H 0M 0S"
+```
+
+## Periods
+You can add and multiply periods:
+
+```{r time9, eval=F, message=F, warning=F, out.width="40%"}
+10 * (months(6) + days(1))
+#> [1] "60m 10d 0H 0M 0S"
+days(50) + hours(25) + minutes(2)
+#> [1] "50d 25H 2M 0S"
+```
+
+## Periods
+And of course, add them to dates. Compared to durations, periods are more likely to do what you expect:
+
+
+```{r time10, eval=F, message=F, warning=F, out.width="40%"}
+# A leap year
+ymd("2016-01-01") + dyears(1) # 정확한 기간 계산 (+365일)
+#> [1] "2016-12-31 06:00:00 UTC"
+ymd("2016-01-01") + years(1) # 해당 숫자의 계산 (+1년)
+#> [1] "2017-01-01"
+
+
+# Daylight Savings Time
+one_pm + ddays(1)
+#> [1] "2016-03-13 14:00:00 EDT"
+one_pm + days(1)
+#> [1] "2016-03-13 13:00:00 EDT"
+```
+
+##Intervals
+
+- What should years(1) / days(1) return? Well, if the year was 2015 it should return 365, but if it was 2016, it should return 366!
+
+- There’s not quite enough information for `lubridate` to give a single clear answer. What it does instead is give an estimate, with a warning:
+
+```{r interval1, eval=F, message=F, warning=F, out.width="40%"}
+years(1) / days(1)
+#> [1] 365.25
+```
+
+## Intervals
+If you want a more accurate measurement, you’ll have to use an interval. An interval is a duration with a starting point: that makes it precise so you can determine exactly how long it is:
+
+```{r interval2, eval=F, message=F, warning=F, out.width="40%"}
+next_year <- today() + years(1)
+(today() %--% next_year) / ddays(1)
+#> [1] 365
+```
+
+## Time zones
+
+```{r tz1, eval=F, message=F, warning=F, out.width="40%"}
+Sys.timezone()
+#> [1] "UTC"
+```
+
+And see the complete list of all time zone names with OlsonNames():
+
+
+```{r tz2, eval=F, message=F, warning=F, out.width="40%"}
+length(OlsonNames())
+#> [1] 594
+head(OlsonNames())
+#> [1] "Africa/Abidjan" "Africa/Accra" "Africa/Addis_Ababa"
+#> [4] "Africa/Algiers" "Africa/Asmara" "Africa/Asmera"
+
+```
+## Time zones
+
+In R, the time zone is an attribute of the date-time that only controls printing. For example, these three objects represent the same instant in time:
+
+```{r tz3, eval=F, message=F, warning=F, out.width="40%"}
+(x1 <- ymd_hms("2015-06-01 12:00:00", tz = "America/New_York"))
+#> [1] "2015-06-01 12:00:00 EDT"
+(x2 <- ymd_hms("2015-06-01 18:00:00", tz = "Europe/Copenhagen"))
+#> [1] "2015-06-01 18:00:00 CEST"
+(x3 <- ymd_hms("2015-06-02 04:00:00", tz = "Pacific/Auckland"))
+#> [1] "2015-06-02 04:00:00 NZST"
+```
+
+##Time zones
+You can verify that they’re the same time using subtraction:
+
+```{r tz4, eval=F, message=F, warning=F, out.width="40%"}
+x1 - x2
+#> Time difference of 0 secs
+x1 - x3
+#> Time difference of 0 secs
+```
+
+나라마다 시간이 다르더라도 같은시간이므로 차이는 0
+
+##Time zones
+You can verify that they’re the same time using subtraction:
+
+```{r tz5, eval=F, message=F, warning=F, out.width="40%"}
+x4 <- c(x1, x2, x3)
+x4
+```
+
+시간을 하나의 벡터로 정리하면 모두 표준시로 변환됨
+
+
+## Time zones
+- Keep the instant in time the same, and change how it’s displayed. Use this when the instant is correct, but you want a more natural display.
+
+```{r tz6, eval=F, message=F, warning=F, out.width="40%"}
+x4a <- with_tz(x4, tzone = "Australia/Lord_Howe")
+x4a
+#> [1] "2015-06-02 02:30:00 +1030" "2015-06-02 02:30:00 +1030"
+#> [3] "2015-06-02 02:30:00 +1030"
+x4a - x4
+#> Time differences in secs
+#> [1] 0 0 0
+#?with_tz
+```
+
+
+## Time zones
+- Change the underlying instant in time. Use this when you have an instant that has been labelled with the incorrect time zone, and you need to fix it.
+
+```{r tz7, eval=F, message=F, warning=F, out.width="40%"}
+#?force_tz
+x4b <- force_tz(x4, tzone = "Australia/Lord_Howe")
+x4b
+#> [1] "2015-06-01 12:00:00 +1030" "2015-06-01 12:00:00 +1030"
+#> [3] "2015-06-01 12:00:00 +1030"
+x4b - x4
+#> Time differences in hours
+#> [1] -14.5 -14.5 -14.5
+```
+
+시간 데이터가 들어있는 벡터를 특정 time zone으로 지정하면 표준시로 지정되었던 시간이 바뀌어 기존 시간과 차이가 발생하게 됨
+
+
