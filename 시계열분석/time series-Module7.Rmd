@@ -190,8 +190,26 @@ accuracy(arimaModel_3)
 
 ### accuracy test for test set
 #install.packages("DMwR")
-library(DMwR)
-# DMwR은 CRAN에서 2021-3월 이후로 사용 중지됨 제공된 zip파일 다운
+#library(DMwR)
+# 2021.3월부터 DMwR패키지는 CRAN에서 삭제되었으므로 패키지를 다운받아야한다
+# 편의상 사용할 함수 코드만 불러와서 사용
+regr.eval <- function(trues,preds,
+                      stats=if (is.null(train.y)) c('mae','mse','rmse','mape') else c('mae','mse','rmse','mape','nmse','nmae'),
+                      train.y=NULL)
+{
+  allSs <- c('mae','mse','rmse','mape','nmse','nmae')
+  if (any(c('nmse','nmad') %in% stats) && is.null(train.y))
+    stop('regr.eval:: train.y parameter not specified.',call.=F)
+  if (!all(stats %in% allSs))
+    stop("regr.eval:: don't know how to calculate -> ",call.=F,
+         paste(stats[which(!(stats %in% allSs))],collapse=','))
+  N <- length(trues)
+  sae <- sum(abs(trues-preds))
+  sse <- sum((trues-preds)^2)
+  r <- c(mae=sae/N,mse=sse/N,rmse=sqrt(sse/N),mape=sum(abs((trues-preds)/trues))/N)
+  if (!is.null(train.y)) r <- c(r,c(nmse=sse/sum((trues-mean(train.y))^2),nmae=sae/sum(abs(trues-mean(train.y)))))
+  return(r[stats])
+}
 
 accmeasures1=regr.eval(test_series, df.forecast1$Point.Forecast)
 accmeasures2=regr.eval(test_series, df.forecast2$Point.Forecast)
